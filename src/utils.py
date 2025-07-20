@@ -1,3 +1,4 @@
+import logging
 import os
 import json
 from datetime import datetime
@@ -7,6 +8,12 @@ from pandas import DataFrame
 import requests
 from dotenv import load_dotenv
 
+# настройка логирования
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# получаем логгер для текущего модуля
+logger = logging.getLogger(__name__)
+
 URL = "https://api.apilayer.com/exchangerates_data/convert"
 
 # Загрузка переменных из .env-файла
@@ -15,21 +22,43 @@ load_dotenv()
 API_KEY_CURRENCY_RATE = os.getenv("API_KEY_CURRENCY_RATE")
 API_KEY_STOCKS_RATE = os.getenv("API_KEY_STOCKS_RATE")
 
-def greet():
-    """
-    Функция, возвращает приветствие в зависимости от времени суток
-    """
 
-    current_user_date_time_hour = datetime.now().hour
+def greet(date_time: datetime = None) -> str:
+    """
+    Функция, возвращает приветствие в зависимости от времени суток.
+    Добавлено логирование и обработка потенциальных ошибок.
+    """
+    logger.info("Начало работы функции greet")
 
-    if 6 <= current_user_date_time_hour < 12:
-        return "Доброе утро"
-    elif 12 <= current_user_date_time_hour < 18:
-        return "Добрый день"
-    elif 18 <= current_user_date_time_hour < 22:
-        return "Добрый вечер"
-    else:
-        return "Доброй ночи"
+    try:
+        if date_time is None:
+            current_user_date_time_hour = datetime.now().hour
+        elif not isinstance(date_time, datetime):  # Проверка типа
+            logger.error("Передан неверный тип данных. Ожидается datetime.")
+            return "Неверный формат даты"
+        else:
+            current_user_date_time_hour = date_time.hour
+        logger.debug(f"Текущий час: {current_user_date_time_hour}")
+
+        if 6 <= current_user_date_time_hour < 12:
+            greeting = "Доброе утро"
+        elif 12 <= current_user_date_time_hour < 18:
+            greeting = "Добрый день"
+        elif 18 <= current_user_date_time_hour < 22:
+            greeting = "Добрый вечер"
+        else:
+            greeting = "Доброй ночи"
+
+        logger.info(f"Приветствие сформировано: {greeting}")
+        return greeting
+
+    except Exception as e:
+        logger.error(f"В функции greet произошла ошибка: {e}")
+        return "Неверный формат даты"
+
+    finally:
+        # всегда выполняется, даже при ошибке
+        logger.info("Функция greet завершила выполнение.")
 
 
 def get_date(date_time: str) -> list[str]:
