@@ -95,13 +95,30 @@ def get_date(date_time: str) -> list[str]:
         return []
 
 
-
 def read_xlsx(path_to_file_xlsx: str) -> DataFrame:
     """
     Функция принимает путь к файлу Excel и читает его
     """
-    excel_data = pd.read_excel(path_to_file_xlsx, sheet_name="Отчет по операциям")
-    return excel_data
+    logging.info(f"Начало работы функции read_xlsx: {path_to_file_xlsx}")
+
+    try:
+        excel_data = pd.read_excel(path_to_file_xlsx, sheet_name="Отчет по операциям")
+        logging.debug(f"Файл успешно прочитан. Форма DataFrame: {excel_data.shape}")
+        logging.info(f"Функция read_xlsx успешно завершена.")
+        return excel_data
+
+    except FileNotFoundError:
+        logging.error(f"Файл не найден: {path_to_file_xlsx}")
+        return pd.DataFrame()
+
+    except pd.errors.ParserError as e:
+        logging.error(f"Ошибка при парсинге Excel файла: {e}")
+        return pd.DataFrame()
+
+    except Exception as e:
+        logging.exception(f"Произошла ошибка: {e}")
+        return pd.DataFrame()
+
 
 
 def get_period(data: DataFrame, date_period: list) -> DataFrame:

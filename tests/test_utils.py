@@ -1,4 +1,6 @@
 import unittest
+import pandas as pd
+from pandas import DataFrame
 from datetime import datetime
 import os
 from unittest.mock import Mock, patch
@@ -8,7 +10,7 @@ import pandas as pd
 import pytest
 import requests
 
-from src.utils import greet, get_date
+from src.utils import greet, get_date, read_xlsx
 
 
 # тест на функцию greet
@@ -25,7 +27,7 @@ from src.utils import greet, get_date
 def test_greet_correct(date_obj: datetime, expected: str) -> None:
     assert greet(date_obj) == expected
 
-# тест на функцию get_date
+# тесты на функцию get_date
 class TestGetDate(unittest.TestCase):
 
     def test_valid_date(self):
@@ -69,3 +71,66 @@ class TestGetDate(unittest.TestCase):
         expected_result = ["01.02.2024 12:00:00", "29.02.2024 12:00:00"]
         actual_result = get_date(date_time)
         self.assertEqual(actual_result, expected_result)
+
+# тесты на функцию read_xlsx
+class TestReadXlsx(unittest.TestCase):
+
+    def setUp(self):
+        """Тест создает тестовый Excel-файл перед каждым тестом"""
+        self.test_file = "test_excel.xlsx"
+        self.sheet_name = "Отчет по операциям"
+        # пример данных для записи
+        self.data = {'col1': [1, 2], 'col2': [3, 4]}
+        self.df = pd.DataFrame(self.data)
+        self.df.to_excel(self.test_file, sheet_name=self.sheet_name, index=False)
+
+    def tearDown(self):
+        """Тест удаляет тестовый Excel-файл после каждого теста"""
+        try:
+            os.remove(self.test_file)
+        except FileNotFoundError:
+            # файл мог быть не создан, если тест не удался
+            pass
+
+    def test_valid_file(self):
+        """Тест проверяет чтение существующего файла"""
+        result_df = read_xlsx(self.test_file)
+        # проверяем, что вернулся DataFrame
+        self.assertIsInstance(result_df, DataFrame)
+        # проверяем, что DataFrame не пустой
+        self.assertFalse(result_df.empty)
+        # сравниваем DataFrame с ожидаемым
+        pd.testing.assert_frame_equal(result_df, self.df)
+
+    def test_file_not_found(self):
+        """Тест проверяет обработку несуществующего файла"""
+        result_df = read_xlsx("non_existent_file.xlsx")
+        # проверяем, что вернулся DataFrame
+        self.assertIsInstance(result_df, DataFrame)
+        # проверяем, что DataFrame пустой
+        self.assertTrue(result_df.empty)
+
+    def test_invalid_file(self):
+        """Тест проверяет обработку поврежденного или не-Excel файла"""
+        with open("invalid_file.txt", "w") as f:
+            f.write("This is not an Excel file.")
+
+        result_df = read_xlsx("invalid_file.txt")
+        self.assertIsInstance(result_df, DataFrame)
+        self.assertTrue(result_df.empty)
+        os.remove("invalid_file.txt")
+
+    def test_empty_file(self):
+        """Тест проверяет чтение пустого excel файла"""
+        empty_test_file = "empty_test_excel.xlsx"
+        empty_df = pd.DataFrame()
+        # создаем пустой excel файл
+        empty_df.to_excel(empty_test_file, sheet_name=self.sheet_name, index=False)
+
+        result_df = read_xlsx(empty_test_file)
+
+        self.assertIsInstance(result_df, DataFrame)
+        # результатом должен быть пустой DataFrame
+        self.assertTrue(result_df.empty)
+
+        os.remove(empty_test_file)
