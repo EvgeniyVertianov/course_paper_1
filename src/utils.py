@@ -66,14 +66,34 @@ def get_date(date_time: str) -> list[str]:
     Функция принимает на вход дату в формате "2020-01-11 16:30:00" и формирует период с начала
     месяца до указанной даты
     """
-    # создаем объект datetime из строки
-    date_object = datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
-    # создаем начальную дату периода
-    first_date_period = date_object.replace(day=1)
-    # форматируем периоды в нужный формат
-    date_object = date_object.strftime("%d.%m.%Y %H:%M:%S")
-    first_date_period = first_date_period.strftime("%d.%m.%Y %H:%M:%S")
-    return [first_date_period, date_object]
+    logging.info(f"Начало работы функции get_date: {date_time}")
+    try:
+        # создаем объект datetime из строки
+        date_object = datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S")
+        logging.debug(f"Объект преобразован в datetime: {date_object}")
+
+        # создаем начальную дату периода
+        first_date_period = date_object.replace(day=1)
+        logging.debug(f"Первая дата периода создана: {first_date_period}")
+
+        # форматируем периоды в нужный формат
+        date_object = date_object.strftime("%d.%m.%Y %H:%M:%S")
+        first_date_period = first_date_period.strftime("%d.%m.%Y %H:%M:%S")
+        logging.debug(f"Отформатированная дата: {date_object}")
+        logging.debug(f"Отформатированная первая дата периода: {first_date_period}")
+
+        result = [first_date_period, date_object]
+        logging.info(f"Функция get_date успешно завершена. Результат: {result}")
+        return result
+
+    except ValueError as e:
+        logging.error(f"Ошибка ValueError: {e}. Некорректный формат даты: {date_time}")
+        return []
+
+    except Exception as e:
+        logging.exception(f"Произошла ошибка: {e}")
+        return []
+
 
 
 def read_xlsx(path_to_file_xlsx: str) -> DataFrame:
