@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 import requests
 
-from src.utils import greet, get_date, read_xlsx
+from src.utils import greet, get_date, read_xlsx, get_period
 
 
 # тест на функцию greet
@@ -134,3 +134,74 @@ class TestReadXlsx(unittest.TestCase):
         self.assertTrue(result_df.empty)
 
         os.remove(empty_test_file)
+
+# тесты на функцию get_period
+class TestGetPeriod(unittest.TestCase):
+
+    def test_empty_dataframe(self):
+        """Тест с пустым DataFrame"""
+        data = pd.DataFrame({'Дата операции': []})
+        date_period = ['01.01.2023', '31.01.2023']
+        result = get_period(data, date_period)
+        # Проверяем, что результат - пустой DataFrame
+        self.assertTrue(result.empty)
+
+    def test_valid_period(self):
+        """Тест с валидным периодом"""
+        data = pd.DataFrame({
+            'Дата операции': ['05.01.2023', '10.01.2023', '15.01.2023', '20.01.2023'],
+            'Сумма': [100, 200, 300, 400]
+        })
+        date_period = ['01.01.2023', '15.01.2023']
+        result = get_period(data, date_period)
+        # Проверяем количество строк
+        self.assertEqual(len(result), 3)
+        # Проверяем правильность фильтрации
+        self.assertEqual(result['Сумма'].sum(), 600)
+
+    def test_period_outside_data_range(self):
+        """Тест, когда период выходит за пределы данных"""
+        data = pd.DataFrame({
+            'Дата операции': ['05.01.2023', '10.01.2023', '15.01.2023'],
+            'Сумма': [100, 200, 300]
+        })
+        # Период после имеющихся данных
+        date_period = ['01.02.2023', '28.02.2023']
+        result = get_period(data, date_period)
+        # Должен вернуться пустой DataFrame
+        self.assertTrue(result.empty)
+
+    def test_incorrect_date_format_in_data(self):
+        """Тест с некорректным форматом даты в данных"""
+        data = pd.DataFrame({
+            'Дата операции': ['05-01-2023', '10.01.2023'],
+            'Сумма': [100, 200]
+        })
+        date_period = ['01.01.2023', '15.01.2023']
+        # Ожидаем ошибку преобразования даты
+        with self.assertRaises(ValueError):
+            get_period(data, date_period)
+
+    def test_date_period_with_time(self):
+        """Тест с датами, содержащими время"""
+        data = pd.DataFrame({
+            'Дата операции': ['05.01.2023 10:00', '10.01.2023 12:00'],
+            'Сумма': [100, 200]
+        })
+        date_period = ['01.01.2023', '15.01.2023']
+        result = get_period(data, date_period)
+        # Обе даты должны попасть в период
+        self.assertEqual(len(result), 2)
+
+    def test_already_sorted_data(self):
+         """Тест с уже отсортированными данными, чтобы проверить, что сортировка не ломает порядок"""
+         data = pd.DataFrame({
+            'Дата операции': ['01.01.2023', '05.01.2023', '10.01.2023'],
+            'Сумма': [100, 200, 300]
+        })
+         data['Дата операции'] = pd.to_datetime(data['Дата операции'], dayfirst=True)
+         date_period = ['01.01.2023', '15.01.2023']
+         # Важно: data.copy(), чтобы не менять исходный DataFrame
+         result = get_period(data.copy(), date_period)
+         # Проверяем, что порядок не нарушен
+         self.assertTrue(result['Дата операции'].is_monotonic_increasing)
