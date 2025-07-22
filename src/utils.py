@@ -211,7 +211,6 @@ def get_top_five(data: DataFrame, top: int) -> list[dict]:
     """
     Функция принимает DataFrame и возвращает top транзакций по сумме платежа
     """
-
     logging.info(f"Начало поиска топ {top} транзакций.")
 
     transactions = []
