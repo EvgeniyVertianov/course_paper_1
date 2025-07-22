@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, MagicMock
 import json
 from pandas import DataFrame
 from datetime import datetime
@@ -12,8 +12,8 @@ import pandas as pd
 import pytest
 import requests
 
-from src.utils import greet, get_date, read_xlsx, get_period, get_data_cards, get_top_five, get_currency_rate
-
+from src.utils import greet, get_date, read_xlsx, get_period, get_data_cards, get_top_five, get_currency_rate, \
+    get_stock_prices
 
 
 # тест на функцию greet
@@ -365,3 +365,113 @@ class TestGetCurrencyRate(unittest.TestCase):
          with patch("builtins.open", mock_open(read_data=mock_file_content)):
               result = get_currency_rate("dummy_path.json")
          self.assertEqual(len(result), 0)
+
+
+
+# тесты на функцию get_stock_prices
+
+class TestGetStockPrices(unittest.TestCase):
+
+    @patch("src.utils.open", new_callable=mock_open, read_data='{"user_stocks": ["AAPL", "GOOG"]}')
+    @patch("src.utils.requests.get")
+    def test_get_stock_prices_success(self, mock_get, mock_file):
+        """
+        Тест проверяет успешное получение стоимости акций из API
+        """
+        # конфигурируем поведение mock запроса requests.get
+        mock_response_AAPL = MagicMock()
+        mock_response_AAPL.status_code = 200
+        mock_response_AAPL.json.return_value = {
+            "Global Quote": {
+                "01. symbol": "AAPL",
+                "05. price": "150.25"
+            }
+        }
+
+        mock_response_GOOG = MagicMock()
+        mock_response_GOOG.status_code = 200
+        mock_response_GOOG.json.return_value = {
+            "Global Quote": {
+                "01. symbol": "GOOG",
+                "05. price": "2700.50"
+            }
+        }
+
+        mock_get.side_effect = [mock_response_AAPL, mock_response_GOOG] # Указываем порядок возвращаемых значений
+
+        # вызываем тестируемую функцию
+        result = get_stock_prices("dummy_path.json")
+
+        # проверяем результат
+        expected_result = [
+            {"stock": "AAPL", "price": "150.25"},
+            {"stock": "GOOG", "price": "2700.50"}
+        ]
+        self.assertEqual(result, expected_result)
+
+        # проверяем, что requests.get вызывался с правильными аргументами, два раза
+        self.assertEqual(mock_get.call_count, 2)
+
+
+    @patch("src.utils.open", new_callable=mock_open, read_data='{"user_stocks": ["AAPL"]}')
+    @patch("src.utils.requests.get")
+    def test_get_stock_prices_api_error(self, mock_get, mock_file):
+        """
+        Тест проверяет обработку ошибки от API (статус код НЕ 200)
+        """
+        mock_response = MagicMock()
+        #  API вернул ошибку
+        mock_response.status_code = 400
+        mock_get.return_value = mock_response
+
+        result = get_stock_prices("dummy_path.json")
+        # должен вернуть пустой список, если произошла ошибка
+        self.assertEqual(result, [])
+
+    @patch("src.utils.open", side_effect=FileNotFoundError)
+    def test_get_stock_prices_file_not_found(self, mock_file):
+        """
+        Тест проверяет обработку ошибки FileNotFoundError
+        """
+        result = get_stock_prices("nonexistent_file.json")
+        self.assertEqual(result, [])
+
+    @patch("src.utils.open", new_callable=mock_open, read_data='Invalid JSON')
+    def test_get_stock_prices_json_decode_error(self, mock_file):
+        """
+        Тест проверяет обработку ошибки json.JSONDecodeError
+        """
+        result = get_stock_prices("dummy_path.json")
+        self.assertEqual(result, [])
+
+    @patch("src.utils.open", new_callable=mock_open, read_data='{"wrong_key": ["AAPL"]}')
+    def test_get_stock_prices_key_error(self, mock_file):
+        """
+        Тест проверяет обработку ошибки KeyError
+        """
+        result = get_stock_prices("dummy_path.json")
+        self.assertEqual(result, [])
+
+    @patch("src.utils.open", new_callable=mock_open, read_data='{"user_stocks": ["AAPL"]}')
+    @patch("src.utils.requests.get", side_effect=Exception("Network error"))
+    def test_get_stock_prices_request_exception(self, mock_get, mock_file):
+        """
+        Тест проверяет обработку ошибки при запросе к API (requests.exceptions.RequestException)
+        """
+        result = get_stock_prices("dummy_path.json")
+        self.assertEqual(result, [])
+
+    @patch("src.utils.open", new_callable=mock_open, read_data='{"user_stocks": ["AAPL"]}')
+    @patch("src.utils.requests.get")
+    def test_get_stock_prices_global_quote_key_error(self, mock_get, mock_file):
+        """
+        Тест проверяет обработку ошибки, когда в ответе API отсутствует ключ "Global Quote"
+        """
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        # Ответ API без ключа "Global Quote"
+        mock_response.json.return_value = {}
+        mock_get.return_value = mock_response
+
+        result = get_stock_prices("dummy_path.json")
+        self.assertEqual(result, [])

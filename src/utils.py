@@ -321,26 +321,59 @@ def get_stock_prices(path_to_file_json: str) -> list[dict]:
         Функция принимает путь к файлу Json и возвращает стоимость акций
         """
     stocks_rate = []
-    with open(path_to_file_json, "r", encoding="utf-8") as file:
-        data = json.load(file)
-        # берем из json файла только акции
-        stocks = data["user_stocks"]
+    logging.info(f"Начинаем обработку файла.")
+    try:
+        with open(path_to_file_json, "r", encoding="utf-8") as file:
+            data = json.load(file)
+            logging.debug(f"Содержимое файла JSON: {data}.")
+            # берем из json файла только акции
+            stocks = data["user_stocks"]
+            logging.debug(f"Список акций из JSON: {stocks}.")
 
-        for stock in stocks:
-            # задаем необходимые параметры для запроса
-            symbol = stock
-            url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={API_KEY_STOCKS_RATE}"
-            response = requests.get(url)
-            status_code = response.status_code
-            if status_code == 200:
-                result = response.json()
-                # берем из ответа название акции
-                stock_response = result["Global Quote"]["01. symbol"]
-                # берем из ответа стоимость акции
-                stock_response_price = result["Global Quote"]["05. price"]
-                # формируем шаблон, который будет добавлять в stocks_rate
-                stocks_rate.append({
-                    "stock": stock_response,
-                    "price": stock_response_price
-                })
-        return stocks_rate
+            for stock in stocks:
+                logging.info(f"Получаем данные для акции: {stock}.")
+                # задаем необходимые параметры для запроса
+                symbol = stock
+                url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={API_KEY_STOCKS_RATE}"
+                logging.debug(f"URL запроса: {url}.")
+                try:
+                    response = requests.get(url)
+                    status_code = response.status_code
+                    logging.debug(f"Код статуса ответа: {status_code}.")
+
+                    if status_code == 200:
+                        result = response.json()
+                        logging.debug(f"Результат запроса API: {result}.")
+                        # берем из ответа название акции
+                        stock_response = result["Global Quote"]["01. symbol"]
+                        # берем из ответа стоимость акции
+                        stock_response_price = result["Global Quote"]["05. price"]
+                        logging.debug(f"Название акции: {stock_response}, цена акции: {stock_response_price}.")
+                        # формируем шаблон, который будет добавлять в stocks_rate
+                        stocks_rate.append({
+                            "stock": stock_response,
+                            "price": stock_response_price
+                        })
+                        logging.info(f"Данные для акции {stock_response} успешно добавлены.")
+                    else:
+                        logging.warning(f"Не удалось получить данные для акции {stock}. Код статуса: {status_code}.")
+
+                except requests.exceptions.RequestException as e:
+                    logging.error(f"Ошибка при выполнении запроса к API для акции {stock}: {e}.")
+
+            logging.info("Обработка файла завершена.")
+            logging.debug(f"Результат: {stocks_rate}.")
+            return stocks_rate
+
+    except FileNotFoundError:
+        logging.error(f"Файл не найден")
+        return []
+    except json.JSONDecodeError:
+        logging.error(f"Ошибка декодирования JSON в файле.")
+        return []
+    except KeyError as e:
+        logging.error(f"Отсутствует ключ {e} в JSON файле.")
+        return []
+    except Exception as e:
+        logging.error(f"Произошла ошибка: {e}.")
+        return []

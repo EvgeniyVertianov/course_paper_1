@@ -25,14 +25,14 @@ def main_views(date_time: str) -> str:
     currency_rate = get_currency_rate("../data/user_settings.json")
 
     # Задание 5 - Стоимость акций из S&P500
-    # stock_prices = get_stock_prices("../data/user_settings.json")
+    stock_prices = get_stock_prices("../data/user_settings.json")
 
     data = {
         "greeting": greeting,
         "cards": data_cards,
         "top_transactions": top_five_transactions,
         "currency_rates": currency_rate,
-        # "stock_prices": stock_prices
+        "stock_prices": stock_prices
     }
 
     json_data = json.dumps(data,ensure_ascii=False, indent=4)
