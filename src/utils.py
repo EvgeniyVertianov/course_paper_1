@@ -1,15 +1,16 @@
+import json
 import logging
 import os
-import json
 from datetime import datetime
+from typing import Any
 
 import pandas as pd
-from pandas import DataFrame
 import requests
 from dotenv import load_dotenv
+from pandas import DataFrame
 
 # настройка логирования
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 # получаем логгер для текущего модуля
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ API_KEY_CURRENCY_RATE = os.getenv("API_KEY_CURRENCY_RATE")
 API_KEY_STOCKS_RATE = os.getenv("API_KEY_STOCKS_RATE")
 
 
-def greet(date_time: datetime = None) -> str:
+def greet(date_time: str) -> str:
     """
     Функция, возвращает приветствие в зависимости от времени суток.
     Добавлено логирование и обработка потенциальных ошибок.
@@ -61,7 +62,7 @@ def greet(date_time: datetime = None) -> str:
         logger.info("Функция greet завершила выполнение.")
 
 
-def get_date(date_time: str) -> list[str]:
+def get_date(date_time: str) -> list[Any] | list[str]:
     """
     Функция принимает на вход дату в формате "2020-01-11 16:30:00" и формирует период с начала
     месяца до указанной даты
@@ -77,12 +78,12 @@ def get_date(date_time: str) -> list[str]:
         logging.debug(f"Первая дата периода создана: {first_date_period}.")
 
         # форматируем периоды в нужный формат
-        date_object = date_object.strftime("%d.%m.%Y %H:%M:%S")
-        first_date_period = first_date_period.strftime("%d.%m.%Y %H:%M:%S")
-        logging.debug(f"Отформатированная дата: {date_object}.")
-        logging.debug(f"Отформатированная первая дата периода: {first_date_period}.")
+        format_date_object = date_object.strftime("%d.%m.%Y %H:%M:%S")
+        format_first_date_period = first_date_period.strftime("%d.%m.%Y %H:%M:%S")
+        logging.debug(f"Отформатированная дата: {format_date_object}.")
+        logging.debug(f"Отформатированная первая дата периода: {format_first_date_period}.")
 
-        result = [first_date_period, date_object]
+        result = [format_first_date_period, format_date_object]
         logging.info(f"Функция get_date успешно завершена. Результат: {result}.")
         return result
 
@@ -99,12 +100,12 @@ def read_xlsx(path_to_file_xlsx: str) -> DataFrame:
     """
     Функция принимает путь к файлу Excel и читает его
     """
-    logging.info(f"Начало работы функции read_xlsx: {path_to_file_xlsx}.")
+    logging.info("Начало работы функции read_xlsx.")
 
     try:
         excel_data = pd.read_excel(path_to_file_xlsx, sheet_name="Отчет по операциям")
         logging.debug(f"Файл успешно прочитан. Форма DataFrame: {excel_data.shape}.")
-        logging.info(f"Функция read_xlsx успешно завершена.")
+        logging.info("Функция read_xlsx успешно завершена.")
         return excel_data
 
     except FileNotFoundError:
@@ -120,13 +121,15 @@ def read_xlsx(path_to_file_xlsx: str) -> DataFrame:
         return pd.DataFrame()
 
 
-def get_period(data: DataFrame, date_period: list) -> DataFrame:
+def get_period(data: DataFrame, date_period: list) -> Any:
     """
     Функция принимает данные из Excel и фильтрует их по указанному периоду, возвращая таблицу
     """
     logging.info("Начало выполнения функции get_period.")
     logging.debug(
-        f"Входные параметры: data (форма DataFrame с {data.shape[0]} строк и {data.shape[1]} столбцов), date_period={date_period}.")
+        f"Входные параметры: data (форма DataFrame с {data.shape[0]} строк и {data.shape[1]} столбцов), "
+        f"date_period={date_period}."
+    )
 
     try:
         logging.info("Преобразование столбца 'Дата операции' в datetime.")
@@ -188,14 +191,12 @@ def get_data_cards(data: DataFrame) -> list[dict]:
                 # присваиваем кэшбэк
                 cashback = round((total_spent / 100), 2)
                 # создаем необходимый шаблон вывода
-                output_template = {
-                    "last_digits": last_digits,
-                    "total_spent": total_spent,
-                    "cashback": cashback
-                }
+                output_template = {"last_digits": last_digits, "total_spent": total_spent, "cashback": cashback}
                 transactions_info.append(output_template)
-                logging.debug(f"Обработана транзакция для карты с последними цифрами: {last_digits}. "
-                              f"Сумма: {total_spent}, Кэшбэк: {cashback}.")
+                logging.debug(
+                    f"Обработана транзакция для карты с последними цифрами: {last_digits}. "
+                    f"Сумма: {total_spent}, Кэшбэк: {cashback}."
+                )
         except KeyError as e:
             logging.error(f"Ошибка KeyError: Отсутствует столбец {e} в DataFrame.")
             return []
@@ -206,6 +207,7 @@ def get_data_cards(data: DataFrame) -> list[dict]:
     logging.info(f"Обработано {len(transactions_info)} транзакций.")
     logging.info("Завершение обработки данных о картах.")
     return transactions_info
+
 
 def get_top_five(data: DataFrame, top: int) -> list[dict]:
     """
@@ -223,7 +225,8 @@ def get_top_five(data: DataFrame, top: int) -> list[dict]:
         logging.debug(f"Выборка топ {top} транзакций.")
         sorted_transactions = sorted_data.head(top)
 
-        # сортируем данные по необходимым столбцам в последующем по которым будем итерироваться для получения информации
+        # сортируем данные по необходимым столбцам в последующем по которым будем итерироваться
+        # для получения информации
         logging.debug("Выбор необходимых столбцов.")
         top_transactions_sorted = sorted_transactions[["Дата платежа", "Сумма операции", "Категория", "Описание"]]
         logging.debug(f"Первые {top} строк отсортированных данных:\n{top_transactions_sorted.head()}.")
@@ -235,7 +238,7 @@ def get_top_five(data: DataFrame, top: int) -> list[dict]:
                 "date": str(row["Дата платежа"]),
                 "amount": str(row["Сумма операции"]),
                 "category": str(row["Категория"]),
-                "description": str(row["Описание"])
+                "description": str(row["Описание"]),
             }
             transactions.append(output_template)
             logging.debug(f"Транзакция обработана: {output_template}")
@@ -252,22 +255,23 @@ def get_top_five(data: DataFrame, top: int) -> list[dict]:
     finally:
         logging.info("Завершение поиска топ транзакций.")
 
+
 def get_currency_rate(path_to_file_json: str) -> list[dict]:
     """
     Функция принимает путь к файлу Json и возвращает курс валют
     """
-    logging.info(f"Начало выполнения функции get_currency_rate.")
+    logging.info("Начало выполнения функции get_currency_rate.")
 
     currency_rate = []
     try:
         with open(path_to_file_json, "r", encoding="utf-8") as file:
             data = json.load(file)
-            logging.debug(f"Данные успешно загружены.")
+            logging.debug("Данные успешно загружены.")
     except FileNotFoundError:
-        logging.error(f"Файл не найден.")
+        logging.error("Файл не найден.")
         return []
     except json.JSONDecodeError:
-        logging.error(f"Ошибка декодирования JSON в файла.")
+        logging.error("Ошибка декодирования JSON в файла.")
         return []
 
     try:
@@ -278,15 +282,10 @@ def get_currency_rate(path_to_file_json: str) -> list[dict]:
         logging.error("Ключ 'user_currencies' не найден в JSON.")
         return []
 
-
     for currency in currencies:
         try:
             # задаем необходимые параметры для запроса
-            params = {
-                "amount": 1,
-                "from": currency,
-                "to": "RUB"
-            }
+            params = {"amount": 1, "from": currency, "to": "RUB"}
             headers = {"apikey": API_KEY_CURRENCY_RATE}
             logging.debug(f"Запрос курса валюты для {currency} -> RUB")
 
@@ -303,10 +302,7 @@ def get_currency_rate(path_to_file_json: str) -> list[dict]:
                 # берем из ответа сумму за 1 рубль и округляем до двух знаков после запятой
                 currency_response_amount = round(result["result"], 2)
                 # формируем шаблон, который будет добавлять в currency_rate
-                currency_rate.append({
-                    "currency": currency_response,
-                    "rate": currency_response_amount
-                })
+                currency_rate.append({"currency": currency_response, "rate": currency_response_amount})
                 logging.info(f"Курс {currency_response} -> RUB: {currency_response_amount}")
             else:
                 logging.warning(f"Ошибка при запросе курса для {currency}. Статус код: {status_code}.")
@@ -316,12 +312,13 @@ def get_currency_rate(path_to_file_json: str) -> list[dict]:
     logging.info("Завершение выполнения функции get_currency_rate.")
     return currency_rate
 
+
 def get_stock_prices(path_to_file_json: str) -> list[dict]:
     """
-        Функция принимает путь к файлу Json и возвращает стоимость акций
-        """
+    Функция принимает путь к файлу Json и возвращает стоимость акций
+    """
     stocks_rate = []
-    logging.info(f"Начинаем обработку файла.")
+    logging.info("Начинаем обработку файла.")
     try:
         with open(path_to_file_json, "r", encoding="utf-8") as file:
             data = json.load(file)
@@ -334,7 +331,11 @@ def get_stock_prices(path_to_file_json: str) -> list[dict]:
                 logging.info(f"Получаем данные для акции: {stock}.")
                 # задаем необходимые параметры для запроса
                 symbol = stock
-                url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={API_KEY_STOCKS_RATE}"
+                url = (
+                    "https://www.alphavantage.co/query?"
+                    f"function=GLOBAL_QUOTE&symbol={symbol}"
+                    f"&apikey={API_KEY_STOCKS_RATE}"
+                )
                 logging.debug(f"URL запроса: {url}.")
                 try:
                     response = requests.get(url)
@@ -350,10 +351,7 @@ def get_stock_prices(path_to_file_json: str) -> list[dict]:
                         stock_response_price = result["Global Quote"]["05. price"]
                         logging.debug(f"Название акции: {stock_response}, цена акции: {stock_response_price}.")
                         # формируем шаблон, который будет добавлять в stocks_rate
-                        stocks_rate.append({
-                            "stock": stock_response,
-                            "price": stock_response_price
-                        })
+                        stocks_rate.append({"stock": stock_response, "price": stock_response_price})
                         logging.info(f"Данные для акции {stock_response} успешно добавлены.")
                     else:
                         logging.warning(f"Не удалось получить данные для акции {stock}. Код статуса: {status_code}.")
@@ -366,10 +364,10 @@ def get_stock_prices(path_to_file_json: str) -> list[dict]:
             return stocks_rate
 
     except FileNotFoundError:
-        logging.error(f"Файл не найден")
+        logging.error("Файл не найден")
         return []
     except json.JSONDecodeError:
-        logging.error(f"Ошибка декодирования JSON в файле.")
+        logging.error("Ошибка декодирования JSON в файле.")
         return []
     except KeyError as e:
         logging.error(f"Отсутствует ключ {e} в JSON файле.")

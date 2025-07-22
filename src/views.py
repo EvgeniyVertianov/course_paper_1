@@ -1,6 +1,15 @@
 import json
 
-from src.utils import greet, get_date, read_xlsx, get_period, get_data_cards, get_top_five, get_currency_rate, get_stock_prices
+from src.utils import (
+    get_currency_rate,
+    get_data_cards,
+    get_date,
+    get_period,
+    get_stock_prices,
+    get_top_five,
+    greet,
+    read_xlsx,
+)
 
 
 def main_views(date_time: str) -> str:
@@ -14,10 +23,11 @@ def main_views(date_time: str) -> str:
     get_data_filtered = get_period(get_data, date_period)
 
     # Задание 1 - Приветствие
-    greeting = greet()
+    greeting = greet(date_time)
 
     # Задание 2 - По каждой карте
     data_cards = get_data_cards(get_data_filtered)
+
     # Задание 3 - Топ-5 транзакций по сумме платежа
     top_five_transactions = get_top_five(get_data_filtered, 5)
 
@@ -32,9 +42,9 @@ def main_views(date_time: str) -> str:
         "cards": data_cards,
         "top_transactions": top_five_transactions,
         "currency_rates": currency_rate,
-        "stock_prices": stock_prices
+        "stock_prices": stock_prices,
     }
-
-    json_data = json.dumps(data,ensure_ascii=False, indent=4)
+    # преобразовываем data в JSON сроку с форматированием отступов в 4 пробела indent=4
+    json_data = json.dumps(data, ensure_ascii=False, indent=4)
 
     return json_data
