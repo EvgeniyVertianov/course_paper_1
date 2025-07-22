@@ -22,7 +22,7 @@ def main_views(date_time: str) -> str:
     top_five_transactions = get_top_five(get_data_filtered, 5)
 
     # Задание 4 - Курс валют
-    # currency_rate = get_currency_rate("../data/user_settings.json")
+    currency_rate = get_currency_rate("../data/user_settings.json")
 
     # Задание 5 - Стоимость акций из S&P500
     # stock_prices = get_stock_prices("../data/user_settings.json")
@@ -31,7 +31,7 @@ def main_views(date_time: str) -> str:
         "greeting": greeting,
         "cards": data_cards,
         "top_transactions": top_five_transactions,
-        # "currency_rates": currency_rate,
+        "currency_rates": currency_rate,
         # "stock_prices": stock_prices
     }
 

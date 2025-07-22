@@ -256,13 +256,31 @@ def get_currency_rate(path_to_file_json: str) -> list[dict]:
     """
     Функция принимает путь к файлу Json и возвращает курс валют
     """
+    logging.info(f"Начало выполнения функции get_currency_rate.")
+
     currency_rate = []
-    with open(path_to_file_json, "r", encoding="utf-8") as file:
-        data = json.load(file)
+    try:
+        with open(path_to_file_json, "r", encoding="utf-8") as file:
+            data = json.load(file)
+            logging.debug(f"Данные успешно загружены.")
+    except FileNotFoundError:
+        logging.error(f"Файл не найден.")
+        return []
+    except json.JSONDecodeError:
+        logging.error(f"Ошибка декодирования JSON в файла.")
+        return []
+
+    try:
         # берем из json файла только валюты
         currencies = data["user_currencies"]
+        logging.debug(f"Валюты, полученные из JSON: {currencies}")
+    except KeyError:
+        logging.error("Ключ 'user_currencies' не найден в JSON.")
+        return []
 
-        for currency in currencies:
+
+    for currency in currencies:
+        try:
             # задаем необходимые параметры для запроса
             params = {
                 "amount": 1,
@@ -270,8 +288,12 @@ def get_currency_rate(path_to_file_json: str) -> list[dict]:
                 "to": "RUB"
             }
             headers = {"apikey": API_KEY_CURRENCY_RATE}
+            logging.debug(f"Запрос курса валюты для {currency} -> RUB")
+
             # формируем ответ
             response = requests.request("GET", URL, headers=headers, params=params)
+            logging.debug(f"Ответ от API: {response.status_code} - {response.text}")
+
             # формируем статус код на положительный исход
             status_code = response.status_code
             if status_code == 200:
@@ -285,7 +307,14 @@ def get_currency_rate(path_to_file_json: str) -> list[dict]:
                     "currency": currency_response,
                     "rate": currency_response_amount
                 })
-        return currency_rate
+                logging.info(f"Курс {currency_response} -> RUB: {currency_response_amount}")
+            else:
+                logging.warning(f"Ошибка при запросе курса для {currency}. Статус код: {status_code}.")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Ошибка при выполнении запроса для {currency}: {e}.")
+
+    logging.info("Завершение выполнения функции get_currency_rate.")
+    return currency_rate
 
 def get_stock_prices(path_to_file_json: str) -> list[dict]:
     """

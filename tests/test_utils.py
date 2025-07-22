@@ -1,16 +1,19 @@
 import unittest
-import pandas as pd
+from unittest.mock import patch, mock_open
+import json
 from pandas import DataFrame
 from datetime import datetime
 import os
 from unittest.mock import Mock, patch
+from dotenv import load_dotenv
 
 import numpy as np
 import pandas as pd
 import pytest
 import requests
 
-from src.utils import greet, get_date, read_xlsx, get_period, get_data_cards, get_top_five
+from src.utils import greet, get_date, read_xlsx, get_period, get_data_cards, get_top_five, get_currency_rate
+
 
 
 # тест на функцию greet
@@ -300,3 +303,65 @@ class TestGetTopFive(unittest.TestCase):
         })
         result = get_top_five(data, 1)
         self.assertEqual(result, [])
+
+# тесты на функцию get_currency_rate
+
+class TestGetCurrencyRate(unittest.TestCase):
+
+    @patch('src.utils.requests.request')
+    def test_successful_currency_retrieval(self, mock_request):
+        """Тест успешного получения курса валют"""
+        mock_response = unittest.mock.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "query": {"from": "USD"},
+            "result": 75.50
+        }
+        mock_request.return_value = mock_response
+
+        mock_file_content = json.dumps({"user_currencies": ["USD"]})
+        with patch("builtins.open", mock_open(read_data=mock_file_content)) as mock_file:
+            result = get_currency_rate("dummy_path.json")
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["currency"], "USD")
+        self.assertEqual(result[0]["rate"], 75.50)
+
+    @patch('src.utils.requests.request')
+    def test_api_error(self, mock_request):
+        """Тест обработки ошибки API"""
+        mock_response = unittest.mock.Mock()
+        mock_response.status_code = 500
+        mock_request.return_value = mock_response
+
+        mock_file_content = json.dumps({"user_currencies": ["USD"]})
+        with patch("builtins.open", mock_open(read_data=mock_file_content)):
+            result = get_currency_rate("dummy_path.json")
+
+        self.assertEqual(len(result), 0)
+
+    def test_file_not_found(self):
+        """Тест обработки ошибки, когда файл не найден"""
+        result = get_currency_rate("nonexistent_file.json")
+        self.assertEqual(len(result), 0)
+
+    def test_invalid_json(self):
+        """Тест обработки ошибки, когда JSON в файле некорректный"""
+        with patch("builtins.open", mock_open(read_data="invalid json")):
+            result = get_currency_rate("dummy_path.json")
+        self.assertEqual(len(result), 0)
+
+    def test_missing_user_currencies_key(self):
+        """Тест обработки ошибки, когда отсутствует ключ 'user_currencies'"""
+        mock_file_content = json.dumps({"other_key": ["USD"]})
+        with patch("builtins.open", mock_open(read_data=mock_file_content)):
+            result = get_currency_rate("dummy_path.json")
+        self.assertEqual(len(result), 0)
+
+    @patch('src.utils.requests.request', side_effect=requests.exceptions.RequestException("Test Exception")) # замените your_module
+    def test_request_exception(self, mock_request):
+         """Тест обработки исключения requests"""
+         mock_file_content = json.dumps({"user_currencies": ["USD"]})
+         with patch("builtins.open", mock_open(read_data=mock_file_content)):
+              result = get_currency_rate("dummy_path.json")
+         self.assertEqual(len(result), 0)
