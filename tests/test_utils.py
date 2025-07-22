@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 import requests
 
-from src.utils import greet, get_date, read_xlsx, get_period
+from src.utils import greet, get_date, read_xlsx, get_period, get_data_cards, get_top_five
 
 
 # тест на функцию greet
@@ -205,3 +205,98 @@ class TestGetPeriod(unittest.TestCase):
          result = get_period(data.copy(), date_period)
          # Проверяем, что порядок не нарушен
          self.assertTrue(result['Дата операции'].is_monotonic_increasing)
+
+# тесты на функцию get_data_cards
+
+class TestGetDataCards(unittest.TestCase):
+
+    def test_empty_dataframe(self):
+        """Тест с пустым DataFrame"""
+        data = pd.DataFrame({
+            "Номер карты": [],
+            "Сумма операции": [],
+            "Кэшбэк": [],
+            "Сумма операции с округлением": []
+        })
+        result = get_data_cards(data)
+        self.assertEqual(result, [])
+
+    def test_valid_transactions(self):
+        """Тест с валидными транзакциями"""
+        data = pd.DataFrame({
+            "Номер карты": ["*1234", "*5678"],
+            "Сумма операции": [-100, -250],
+            "Кэшбэк": [1, 2],
+            "Сумма операции с округлением": [-100.0, -250.0]
+        })
+        expected_result = [
+            {"last_digits": "1234", "total_spent": -100.0, "cashback": -1.0},
+            {"last_digits": "5678", "total_spent": -250.0, "cashback": -2.5}
+        ]
+        result = get_data_cards(data)
+        self.assertEqual(result, expected_result)
+
+    def test_no_negative_transactions(self):
+        """Тест, когда нет отрицательных транзакций"""
+        data = pd.DataFrame({
+            "Номер карты": ["*1234", "*5678"],
+            "Сумма операции": [100, 200],
+            "Кэшбэк": [0, 0],
+            "Сумма операции с округлением": [100, 200]
+        })
+        result = get_data_cards(data)
+        self.assertEqual(result, [])
+
+# тесты на функцию get_top_five
+
+class TestGetTopFive(unittest.TestCase):
+
+    def test_empty_dataframe(self):
+        """Тест с пустым DataFrame"""
+        data = pd.DataFrame({
+                "Дата платежа": [],
+                "Сумма операции": [],
+                "Категория": [],
+                "Описание": []
+            })
+        result = get_top_five(data, 3)
+        self.assertEqual(result, [])
+
+    def test_valid_transactions(self):
+        """Тест с валидными транзакциями"""
+        data = pd.DataFrame({
+            "Дата платежа": ["2023-01-01", "2023-01-02", "2023-01-03", "2023-01-04"],
+            "Сумма операции": [100, 200, 50, 300],
+            "Категория": ["A", "B", "C", "D"],
+            "Описание": ["Desc1", "Desc2", "Desc3", "Desc4"]
+        })
+        expected_result = [
+            {"date": "2023-01-04", "amount": "300", "category": "D", "description": "Desc4"},
+            {"date": "2023-01-02", "amount": "200", "category": "B", "description": "Desc2"},
+            {"date": "2023-01-01", "amount": "100", "category": "A", "description": "Desc1"}
+        ]
+        result = get_top_five(data, 3)
+        self.assertEqual(result, expected_result)
+
+    def test_fewer_transactions_than_top(self):
+        """Тест, когда транзакций меньше, чем запрошенный топ"""
+        data = pd.DataFrame({
+            "Дата платежа": ["2023-01-01", "2023-01-02"],
+            "Сумма операции": [100, 200],
+            "Категория": ["A", "B"],
+            "Описание": ["Desc1", "Desc2"]
+        })
+        expected_result = [
+            {"date": "2023-01-02", "amount": "200", "category": "B", "description": "Desc2"},
+            {"date": "2023-01-01", "amount": "100", "category": "A", "description": "Desc1"}
+        ]
+        result = get_top_five(data, 5)
+        self.assertEqual(result, expected_result)
+
+    def test_key_error(self):
+        """Тест, когда в DataFrame отсутствует необходимый столбец"""
+        data = pd.DataFrame({
+            "Неправильный столбец": ["2023-01-01"],
+        })
+        result = get_top_five(data, 1)
+        self.assertEqual(result, [])

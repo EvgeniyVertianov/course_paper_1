@@ -164,25 +164,6 @@ def get_period(data: DataFrame, date_period: list) -> DataFrame:
         logging.error(f"Произошла ошибка: {e}", exc_info=True)
         raise
 
-# def get_period(data: DataFrame, date_period: list) -> DataFrame:
-#     """
-#     Функция принимает данные из Excel и фильтрует их по указанному периоду, возвращая таблицу
-#     """
-#     # преобразовываем данные из столбца "Дата операции" в datetime c параметром dayfirst который
-#     # указываем на то, что первое число даты это день
-#     data["Дата операции"] = pd.to_datetime(data["Дата операции"], dayfirst = True)
-#     # указываем начальную дату
-#     start_date = date_period[0]
-#     # указываем конечную дату
-#     end_date = date_period[1]
-#     # Преобразуем start_date и end_date в datetime
-#     start_date = pd.to_datetime(start_date, dayfirst=True)
-#     end_date = pd.to_datetime(end_date, dayfirst=True)
-#     # делаем срез по датам
-#     filtered_data = data[(data["Дата операции"] >= start_date) & (data["Дата операции"] <= end_date)]
-#     # сортируем по столбцу "Дата операции" от меньшего к большему ascending = True
-#     sorted_data = filtered_data.sort_values(by="Дата операции", ascending = True)
-#     return sorted_data
 
 def get_data_cards(data: DataFrame) -> list[dict]:
     """
@@ -195,7 +176,7 @@ def get_data_cards(data: DataFrame) -> list[dict]:
     # сортируем данные по необходимым столбцам в последующем по которым будем итерироваться для получения информации
     sorted_info = data[["Номер карты", "Сумма операции", "Кэшбэк", "Сумма операции с округлением"]]
     # Логируем первые 5 строк для проверки
-    logging.debug(f"Первые 5 строк отсортированных данных:\n{sorted_info.head()}")
+    logging.debug(f"Первые 5 строк отсортированных данных:\n{sorted_info.head()}.")
 
     for index, row in sorted_info.iterrows():
         try:
@@ -205,7 +186,7 @@ def get_data_cards(data: DataFrame) -> list[dict]:
                 # присваиваем сумму операции
                 total_spent = row["Сумма операции с округлением"]
                 # присваиваем кэшбэк
-                cashback = total_spent // 100
+                cashback = round((total_spent / 100), 2)
                 # создаем необходимый шаблон вывода
                 output_template = {
                     "last_digits": last_digits,
@@ -219,7 +200,7 @@ def get_data_cards(data: DataFrame) -> list[dict]:
             logging.error(f"Ошибка KeyError: Отсутствует столбец {e} в DataFrame.")
             return []
         except Exception as e:
-            logging.error(f"Произошла непредвиденная ошибка при обработке строки {index}: {e}")
+            logging.error(f"Произошла ошибка при обработке строки {index}: {e}.")
             return []
 
     logging.info(f"Обработано {len(transactions_info)} транзакций.")
@@ -231,24 +212,46 @@ def get_top_five(data: DataFrame, top: int) -> list[dict]:
     Функция принимает DataFrame и возвращает top транзакций по сумме платежа
     """
 
-    transactions = []
-    # сортируем по столбцу "Сумма операции" от большего к меньшему ascending = False
-    sorted_data = data.sort_values(by="Сумма операции", ascending=False)
-    # фильтруем данные по первым top с помощью метода .head(top)
-    sorted_transactions = sorted_data.head(top)
-    # сортируем данные по необходимым столбцам в последующем по которым будем итерироваться для получения информации
-    top_transactions_sorted = sorted_transactions [["Дата платежа", "Сумма операции", "Категория", "Описание"]]
+    logging.info(f"Начало поиска топ {top} транзакций.")
 
-    for index, row in top_transactions_sorted.iterrows():
-        # создаем необходимый шаблон вывода
-        output_template = {
-            "date": f"{row["Дата платежа"]}",
-            "amount": f"{row["Сумма операции"]}",
-            "category": f"{row["Категория"]}",
-            "description": f"{row ["Описание"]}"
-        }
-        transactions.append(output_template)
-    return transactions
+    transactions = []
+    try:
+        # сортируем по столбцу "Сумма операции" от большего к меньшему ascending = False
+        logging.debug("Сортировка данных по сумме операции.")
+        sorted_data = data.sort_values(by="Сумма операции", ascending=False)
+
+        # фильтруем данные по первым top с помощью метода .head(top)
+        logging.debug(f"Выборка топ {top} транзакций.")
+        sorted_transactions = sorted_data.head(top)
+
+        # сортируем данные по необходимым столбцам в последующем по которым будем итерироваться для получения информации
+        logging.debug("Выбор необходимых столбцов.")
+        top_transactions_sorted = sorted_transactions[["Дата платежа", "Сумма операции", "Категория", "Описание"]]
+        logging.debug(f"Первые {top} строк отсортированных данных:\n{top_transactions_sorted.head()}.")
+
+        logging.debug("Итерация по транзакциям и создание шаблона вывода.")
+        for index, row in top_transactions_sorted.iterrows():
+            # создаем необходимый шаблон вывода
+            output_template = {
+                "date": str(row["Дата платежа"]),
+                "amount": str(row["Сумма операции"]),
+                "category": str(row["Категория"]),
+                "description": str(row["Описание"])
+            }
+            transactions.append(output_template)
+            logging.debug(f"Транзакция обработана: {output_template}")
+
+        logging.info(f"Найдено {len(transactions)} топ транзакций.")
+        return transactions
+
+    except KeyError as e:
+        logging.error(f"Ошибка KeyError: Отсутствует столбец {e} в DataFrame.")
+        return []
+    except Exception as e:
+        logging.error(f"Произошла ошибка при обработке данных: {e}")
+        return []
+    finally:
+        logging.info("Завершение поиска топ транзакций.")
 
 def get_currency_rate(path_to_file_json: str) -> list[dict]:
     """

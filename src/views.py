@@ -19,7 +19,7 @@ def main_views(date_time: str) -> str:
     # Задание 2 - По каждой карте
     data_cards = get_data_cards(get_data_filtered)
     # Задание 3 - Топ-5 транзакций по сумме платежа
-    # top_five_transactions = get_top_five(get_data_filtered, 5)
+    top_five_transactions = get_top_five(get_data_filtered, 5)
 
     # Задание 4 - Курс валют
     # currency_rate = get_currency_rate("../data/user_settings.json")
@@ -30,7 +30,7 @@ def main_views(date_time: str) -> str:
     data = {
         "greeting": greeting,
         "cards": data_cards,
-        # "top_transactions": top_five_transactions,
+        "top_transactions": top_five_transactions,
         # "currency_rates": currency_rate,
         # "stock_prices": stock_prices
     }
