@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from datetime import datetime
 from typing import Any
 
@@ -24,6 +25,7 @@ API_KEY_CURRENCY_RATE = os.getenv("API_KEY_CURRENCY_RATE")
 API_KEY_STOCKS_RATE = os.getenv("API_KEY_STOCKS_RATE")
 
 
+# функции для модуля views
 def greet(date_time: str) -> str:
     """
     Функция, возвращает приветствие в зависимости от времени суток.
@@ -375,3 +377,63 @@ def get_stock_prices(path_to_file_json: str) -> list[dict]:
     except Exception as e:
         logging.error(f"Произошла ошибка: {e}.")
         return []
+
+
+# функции для модуля services
+def get_transactions(data: pd.DataFrame) -> list[dict]:
+    """
+    Функция принимает DataFrame и возвращает список транзакций
+    """
+    logging.info("Начало обработки DataFrame для извлечения транзакций.")
+
+    transactions = []
+    try:
+        for index, row in data.iterrows():
+            # создаем необходимый шаблон вывода
+            output_template = {
+                "payment date": str(row["Дата платежа"]),
+                "card number": str(row["Номер карты"]),
+                "category": str(row["Категория"]),
+                "description": str(row["Описание"]),
+            }
+            transactions.append(output_template)
+
+    except KeyError as e:
+        logging.error(f"Ошибка KeyError при обработке строки DataFrame: Отсутствует столбец {e}")
+        return []
+
+    except Exception as e:
+        logging.exception(f"Ошибка: {e} при обработке DataFrame.")
+        return []
+
+    logging.info(f"Успешно извлечено {len(transactions)} транзакций.")
+
+    return transactions
+
+
+def get_phone_numbers(data: list) -> list:
+    """
+    Функция принимает список транзакций, фильтрует его и возвращает список транзакций в описании
+    которых есть телефонные номера
+    """
+    logging.info("Начало поиска транзакций с телефонными номерами.")
+
+    # создаем шаблон для поиска мобильных номеров в описании
+    pattern = re.compile(r"\+7 \d{3} \d{3}-\d{2}-\d{2}")
+
+    transactions_with_phone_numbers = []
+    try:
+        for transaction in data:
+            try:
+                if re.search(pattern, transaction["description"]):
+                    transactions_with_phone_numbers.append(transaction)
+                    logging.debug(f"Найдена транзакция с номером телефона: {transaction['description']}")
+            except KeyError:
+                logging.warning("В транзакции отсутствует поле 'description'. Пропускаем.")
+
+    except Exception as e:
+        logging.exception(f"Ошибка при обработке транзакций: {e}")
+        return []
+
+    logging.info(f"Найдено {len(transactions_with_phone_numbers)} транзакций с телефонными номерами.")
+    return transactions_with_phone_numbers
