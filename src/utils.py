@@ -98,7 +98,7 @@ def get_date(date_time: str) -> list[Any] | list[str]:
         return []
 
 
-def read_xlsx(path_to_file_xlsx: str) -> DataFrame:
+def read_xlsx(path_to_file_xlsx: str) -> pd.DataFrame:
     """
     Функция принимает путь к файлу Excel и читает его
     """

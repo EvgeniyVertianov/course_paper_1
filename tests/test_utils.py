@@ -10,16 +10,8 @@ import pytest
 import requests
 from pandas import DataFrame
 
-from src.utils import (
-    get_currency_rate,
-    get_data_cards,
-    get_date,
-    get_period,
-    get_stock_prices,
-    get_top_five,
-    greet,
-    read_xlsx,
-)
+from src.utils import (get_currency_rate, get_data_cards, get_date, get_period, get_stock_prices, get_top_five, greet,
+                       read_xlsx)
 
 
 # тест на функцию greet
